@@ -1,0 +1,59 @@
+FROM centos:centos6
+
+
+#--- ARGS ---#
+ARG user=jenkins
+ARG group=jenkins
+ARG uid=1000
+ARG gid=1000
+ARG http_port=8080
+ARG agent_port=60000
+ARG JENKINS_VERSION=2.60.1
+
+#--- Dependencies ---#
+RUN yum -y -q -e 0 install tar
+RUN yum -y -q -e 0 install vim
+RUN yum -y -q -e 0 install sudo
+RUN yum -y -q -e 0 install java-1.8.0-openjdk.x86_64
+RUN yum -y -q -e 0 install sudo
+RUN yum -y -q -e 0 install wget
+RUN yum -y -q -e 0 install tar
+RUN yum -y -q -e 0 install openssl
+RUN yum -y -q -e 0 install git
+RUN yum -y -q -e 0 install epel-release
+RUN yum -y -q -e 0 install python
+RUN yum -y -q -e 0 install unzip
+RUN yum -y -q -e 0 install python-pip
+RUN pip install boto3
+RUN pip install awscli
+
+
+#--- Add credentials & script for downloading Jenkins last backup ---#
+USER root
+ADD restore_jenkins.sh /opt/restore_jenkins.sh
+RUN mkdir /root/.aws
+ADD config/aws /root/.aws/credentials
+ADD config/sudo /etc/sudoers.d/jenkins
+
+#--- Jenkins user & group ---#
+RUN useradd -ms /bin/bash jenkins -d /var/lib/jenkins
+RUN usermod -a -G jenkins jenkins
+
+#--- Download backup ---#
+RUN bash /opt/restore_jenkins.sh
+ADD attachments/secret.key /var/lib/jenkins/secret.key
+RUN mkdir /var/lib/jenkins/secrets
+ADD attachments/secrets/* /var/lib/jenkins/secrets/
+RUN chown -R jenkins /var/lib/jenkins
+
+#--- Jenkins Installation ---#
+RUN wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
+RUN rpm --import http://pkg.jenkins-ci.org/redhat-stable/jenkins-ci.org.key
+RUN yum install -y jenkins-$JENKINS_VERSION
+
+#--- UNZIP Jenkins backup ---#
+USER jenkins
+RUN cd /var/lib/jenkins && unzip jenkins.zip
+
+#--- Start Jenkins ---#
+/etc/init.d/jenkins start
