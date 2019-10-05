@@ -1,4 +1,4 @@
-FROM centos:centos6
+FROM centos:centos7
 
 
 #--- ARGS ---#
@@ -8,7 +8,7 @@ ARG uid=1000
 ARG gid=1000
 ARG http_port=8080
 ARG agent_port=60000
-ARG JENKINS_VERSION=2.60.1
+ARG JENKINS_VERSION=2.190.1
 
 #--- Dependencies ---#
 RUN yum -y -q -e 0 install tar
